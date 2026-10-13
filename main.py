@@ -1,4 +1,4 @@
-"""A single muted/deafened voice connection. No commands or audio capture."""
+"""A single deafened voice connection with self_mute disabled. No commands or audio capture."""
 import asyncio
 import ctypes.util
 import os
@@ -27,12 +27,12 @@ class VoiceAccount(discord.Client):
                 if not isinstance(channel, discord.VoiceChannel):
                     raise ValueError("Expected an ordinary guild voice channel")
                 await channel.connect(
-                    self_mute=True,
+                    self_mute=False,
                     self_deaf=True,
                     reconnect=True,
                     timeout=60,
                 )
-                print("Войс подключён. Микрофон и звук выключены.", flush=True)
+                print("Войс подключён. Запрошено: наушники выключены, self_mute=False.", flush=True)
             except Exception as error:
                 # Do not print exception payloads, tokens or environment variables.
                 print(f"Ошибка подключения: {type(error).__name__}", flush=True)
