@@ -1,4 +1,4 @@
-"""A single deafened voice connection with self_mute disabled. No commands or audio capture."""
+"""FakeDeafen-style resend sequence with no audio capture. No commands or audio capture."""
 import asyncio
 import ctypes.util
 import os
@@ -28,16 +28,38 @@ class VoiceAccount(discord.Client):
                     raise ValueError("Expected an ordinary guild voice channel")
                 await channel.connect(
                     self_mute=False,
-                    self_deaf=True,
+                    self_deaf=False,
                     reconnect=True,
                     timeout=60,
                 )
-                print("Войс подключён. Запрошено: наушники выключены, self_mute=False.", flush=True)
+                # Match FakeDeafen.forceResend(): toggle mute on, then back off,
+                # while its outgoing voiceStateUpdate patch forces deaf=True.
+                await channel.guild.change_voice_state(
+                    channel=channel, self_mute=True, self_deaf=True
+                )
+                await asyncio.sleep(0.06)
+                await channel.guild.change_voice_state(
+                    channel=channel, self_mute=False, self_deaf=True
+                )
+                print("FakeDeafen: последовательность отправлена; ожидаем флаги Discord.", flush=True)
             except Exception as error:
                 # Do not print exception payloads, tokens or environment variables.
                 print(f"Ошибка подключения: {type(error).__name__}", flush=True)
                 self.failed = True
                 await self.close()
+
+
+    async def on_voice_state_update(self, member, before, after):
+        if self.user is None or member.id != self.user.id:
+            return
+        if after.channel is None or after.channel.id != self.channel_id:
+            return
+        print(
+            "Discord voice state: "
+            f"self_mute={after.self_mute}, self_deaf={after.self_deaf}, "
+            f"server_mute={after.mute}, server_deaf={after.deaf}",
+            flush=True,
+        )
 
 
 async def run():
